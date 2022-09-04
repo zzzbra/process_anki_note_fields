@@ -4,16 +4,19 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"start": "node index.js",
+		"update_deck": "node index.js",
 		"watch": "npx nodemon index.js",
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
+		"@google-cloud/translate": "^7.0.1",
+		"csv": "^6.2.0",
 		"csv-parser": "^3.0.0"
 	},
 	"devDependencies": {
+		"dotenv": "^16.0.2",
 		"nodemon": "^2.0.19"
 	}
 }

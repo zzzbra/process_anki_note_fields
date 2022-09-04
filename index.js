@@ -1,53 +1,111 @@
+require('dotenv').config();
 const fs = require("fs");
-const csvParser = require("csv-parser");
+const { pipeline } = require('stream/promises');
+const { parse, transform, stringify } = require("csv");
 
-const SOURCE_FILE_NAME = "source.txt";
-const TARGET_FILE_NAME = "🐯 한국어__어휘__Retro's Beginner Vocabulary Sentences.txt";
+const { Translate } = require('@google-cloud/translate').v2;
+const {
+	// PROJECT_ID,
+	// LOCATION,
+	SOURCE_FILE_NAME,
+	TARGET_FILE_NAME,
+	KOREAN_EXPRESSION,
+	EXPRESSION_MEANING,
+	KOREAN_WORD,
+	WORD_MEANING,
+	// CREDENTIALS,
+} = require('./constants');
 
-// Field Names
-const KOREAN_EXPRESSION = "Korean Expression";
-const EXPRESSION_MEANING = "Expression Meaning";
-const KOREAN_WORD = "Korean Word";
-const WORD_MEANING = "Word Meaning";
+/**
+ * Parser set up
+ */
+const parserOptions = {
+	columns: true,
+	delimiter: "\t",
+};
+const parser = parse(parserOptions, function (err, records) {
+	if (err) console.error("Parsing Error:", err);
+	// console.log("Num records parsed:", records.length);
+})
 
-const result = [];
-let failCount = 0;
-
+/**
+ * Korean Word extraction
+ */
 const getWord = function (data) {
 	const rBoldTag = /<b>(.*?)<\/b>/gi;
 	const koreanWord = rBoldTag.exec(data[KOREAN_EXPRESSION]);
 	data[KOREAN_WORD] = koreanWord[1];
+	return data;
 }
 
-// only call once
-const flag = true;
+const wordTransposer = transform(function (record) {
+	return getWord(record)
+}, function (err, output) {
+	if (err) {
+		console.error("Transformer Error:", err);
+	}
+	return output
+});
 
-const getTranslation = function (data, sourceField = KOREAN_WORD, targetField = WORD_MEANING) {
-	if (flag) {
-		// Make Google translate request here
-		
-		flag = false;
+/**
+ * Translation stuff
+ * 
+ * TODO: investigate use of Client Lib instead, or v3
+ */
+const translate = new Translate({
+	credentials: JSON.parse(process.env.CREDENTIALS),
+	projectId: JSON.parse(process.env.CREDENTIALS).project_id,
+});
+
+async function translateText(text) {
+	try {
+		const [translation] = await translate.translate(text, 'en');
+		return translation;
+	} catch (error) {
+		console.error('GOOGLE API ERROR:', error)
 	}
 }
 
-// [x] parse out the bolded word from the expression and add it to the Korean Word field
-// [ ] hit some API requesting a translation of the word and add it to the Word Meaning Field
-// [ ] hit some API requesting a translation of the expressiong and add it to the Expression Meaning Field
-
-// We'll add the audio within Anki later -> but if we did it here, could possibly randomize which 
-// voice we pick, which would be fun
-const handleData = function (data) {
-	getWord(data);
-
-	result.push(data);
+const setTranslation = async function (data, sourceField = KOREAN_WORD, targetField = WORD_MEANING) {
+	const translation = await translateText(data[sourceField]);
+	data[targetField] = translation;
+	return data;
 }
 
-fs.createReadStream(SOURCE_FILE_NAME)
-  .pipe(csvParser({
-    separator: "\t",
-  }))
-  .on("data", handleData)
-  .on("end", () => {
-    // console.log(result);
-		console.log('first: ', result[0]);
-  });
+// Using this 'done' callback was what I had been missing for ages
+const dataFetcher = transform(async function (record, done) {
+	let recordWithTranslation = record;
+	recordWithTranslation = await setTranslation(record, KOREAN_WORD, WORD_MEANING);
+	recordWithTranslation = await setTranslation(record, KOREAN_EXPRESSION, EXPRESSION_MEANING);
+	done(null, recordWithTranslation);
+}, function (err, output) {
+	if (err) console.error("Data Fetcher Transformer Error:", err);
+	return output;
+});
+
+const columns = [
+	'Node ID',
+  'Korean Word',
+  'Word Meaning',
+  'Word Audio',
+  'Korean Expression',
+  'Expression Meaning',
+  'Expression Audio',
+  'Picture',
+  'Hint',
+  'Sort',
+  'Tags'
+];
+const stringifier = stringify({ delimiter: "\t" });
+
+const readStream = fs.createReadStream(SOURCE_FILE_NAME);
+const writeStream = fs.createWriteStream(TARGET_FILE_NAME);
+
+readStream
+	.pipe(parser)
+	.pipe(wordTransposer)
+	.pipe(dataFetcher)
+	.pipe(stringifier)
+	.pipe(writeStream)
+	.on("end", () => console.log('Finished'));
+
