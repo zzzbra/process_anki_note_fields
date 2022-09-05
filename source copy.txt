@@ -1,4 +1,4 @@
-Note ID	Korean Word	Word Meaning	Word Audio	Korean Expression	Expression Meaning	Expression Audio	Picture	Hint	Sort	Tags
+Note ID	Korean Word	Word Meaning	Word Audio	Korean Expression	Expression Meaning	Expression Audio	Picture	Hint	Sort
 dfb3d388-2cb3-11ed-a970-3b66871c921d				<div><b>안녕하십니까</b>? 9시 뉴스<b>입니다</b></div><div></div>		"[sound:1-1-13-1.mp3]<img src=""paste-125aeb8fa1091ecc1898eba0a2372987a17817a2.jpg"">"			1-1-13-1	Beginner
 dfb40d76-2cb3-11ed-a970-3b66871c921d				<div>질문 <b>있습니까</b>?&nbsp;</div>		"[sound:1-1-13-2.mp3]<img src=""paste-841e1b4bdd76b7d07cf8361c35bf1911c2b44d20.jpg"">"			1-1-13-2	Beginner
 dfb43666-2cb3-11ed-a970-3b66871c921d				<div>가: 이것을 어떻게 <b>생각합니까</b>?&nbsp;</div><div><div>나: <b>좋습니다</b>.&nbsp;</div></div>		"[sound:1-1-13-3.mp3]<img src=""paste-5c72a8106221541230acfc443746cf6ebe405a56.jpg"">"			1-1-13-3	Beginner Retired

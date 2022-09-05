@@ -1,8 +1,6 @@
 require('dotenv').config();
 const fs = require("fs");
-const { pipeline } = require('stream/promises');
 const { parse, transform, stringify } = require("csv");
-
 const { Translate } = require('@google-cloud/translate').v2;
 const {
 	// PROJECT_ID,
@@ -11,8 +9,11 @@ const {
 	TARGET_FILE_NAME,
 	KOREAN_EXPRESSION,
 	EXPRESSION_MEANING,
+	EXPRESSION_AUDIO,
 	KOREAN_WORD,
 	WORD_MEANING,
+	PICTURE,
+	// WORD_AUDIO,
 	// CREDENTIALS,
 } = require('./constants');
 
@@ -24,8 +25,11 @@ const parserOptions = {
 	delimiter: "\t",
 };
 const parser = parse(parserOptions, function (err, records) {
-	if (err) console.error("Parsing Error:", err);
-	// console.log("Num records parsed:", records.length);
+	if (err) {
+		console.error("Parsing Error:", err);
+	} else {
+		console.log("Num records parsed:", records.length);
+	}
 })
 
 /**
@@ -38,8 +42,34 @@ const getWord = function (data) {
 	return data;
 }
 
-const wordTransposer = transform(function (record) {
+const wordTransformer = transform(function (record) {
 	return getWord(record)
+}, function (err, output) {
+	if (err) {
+		console.error("Transformer Error:", err);
+	}
+	return output
+});
+
+/**
+ * Move image from audio field (if there is one)
+ * 
+ * Ideally would detect if there _is_ any image in any of the fields, and then move it to the image
+ * field
+ */
+const moveImage = function (data) {
+	const rImgTag = /(<img.*?\>)/g;
+	const img = rImgTag.exec(data[EXPRESSION_AUDIO]);
+	if (img?.length) {
+		data[PICTURE] = img[1];
+		data[EXPRESSION_AUDIO] = data[EXPRESSION_AUDIO].replace(rImgTag, "");
+	}
+	console.log({ data });
+	return data;
+}
+
+const imageTransformer = transform(function (record) {
+	return moveImage(record)
 }, function (err, output) {
 	if (err) {
 		console.error("Transformer Error:", err);
@@ -103,7 +133,8 @@ const writeStream = fs.createWriteStream(TARGET_FILE_NAME);
 
 readStream
 	.pipe(parser)
-	.pipe(wordTransposer)
+	.pipe(wordTransformer)
+	.pipe(imageTransformer)
 	.pipe(dataFetcher)
 	.pipe(stringifier)
 	.pipe(writeStream)
