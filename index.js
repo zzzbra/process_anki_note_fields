@@ -64,7 +64,6 @@ const moveImage = function (data) {
 		data[PICTURE] = img[1];
 		data[EXPRESSION_AUDIO] = data[EXPRESSION_AUDIO].replace(rImgTag, "");
 	}
-	console.log({ data });
 	return data;
 }
 
