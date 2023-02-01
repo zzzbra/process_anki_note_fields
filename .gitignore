@@ -1,2 +1,7 @@
+# Env
 .env
 virtual-*
+
+# Sources
+decks/
+
